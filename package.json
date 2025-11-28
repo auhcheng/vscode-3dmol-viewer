@@ -2,12 +2,13 @@
   "name": "3dmol-viewer",
   "displayName": "3Dmol Viewer",
   "description": "Open .xyz or .trj molecular files in a 3Dmol.js webview inside VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "auhcheng",
   "repository": {
     "type": "git",
     "url": "https://github.com/auhcheng/vscode-3dmol-viewer.git"
   },
+  "icon": "media/molecule-icon.png",
   "engines": {
     "vscode": "^1.84.0"
   },

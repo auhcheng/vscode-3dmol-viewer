@@ -1,0 +1,114 @@
+{
+  "name": "3dmol-viewer",
+  "displayName": "3Dmol Viewer",
+  "description": "Open .xyz or .trj molecular files in a 3Dmol.js webview inside VS Code.",
+  "version": "0.0.1",
+  "publisher": "auhcheng",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/auhcheng/vscode-3dmol-viewer.git"
+  },
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:xyz"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "3Dmol Viewer",
+      "properties": {
+        "3dmolViewer.defaultOpenMode": {
+          "type": "string",
+          "enum": ["viewer", "text"],
+          "default": "viewer",
+          "description": "Choose whether .xyz/.trj files open in the 3Dmol Viewer or the standard text editor by default.",
+          "enumDescriptions": [
+            "Always open using the 3Dmol Viewer (custom editor).",
+            "Open in the built-in text editor; the viewer remains available via Toggle 3D/Text View."
+          ]
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "xyz",
+        "aliases": ["XYZ"],
+        "extensions": [".xyz", ".trj"]
+      }
+    ],
+    "commands": [
+      {
+        "command": "3dmolViewer.open",
+        "title": "Open in 3Dmol Viewer",
+        "category": "3Dmol Viewer"
+      },
+      {
+        "command": "3dmolViewer.openFromEditor",
+        "title": "Open Active File in 3Dmol Viewer",
+        "category": "3Dmol Viewer"
+      },
+      {
+        "command": "3dmolViewer.toggleView",
+        "title": "Toggle 3D/Text View",
+        "category": "3Dmol Viewer",
+        "icon": {
+          "light": "media/molecule-light.svg",
+          "dark": "media/molecule-dark.svg"
+        }
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "3dmolViewer.toggleView",
+          "when": "resourceExtname =~ /\\.(xyz|XYZ|trj|TRJ)$/",
+          "group": "navigation@90"
+        },
+        {
+          "command": "3dmolViewer.toggleView",
+          "when": "customEditorId == 3dmolViewer.viewer",
+          "group": "navigation@90"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "3dmolViewer.open",
+          "when": "resourceExtname =~ /\\.(xyz|XYZ|trj|TRJ)$/",
+          "group": "navigation@10"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "3dmolViewer.open"
+        },
+        {
+          "command": "3dmolViewer.openFromEditor"
+        },
+        {
+          "command": "3dmolViewer.toggleView"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "3dmolViewer.viewer",
+        "displayName": "3Dmol Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.xyz"
+          },
+          {
+            "filenamePattern": "*.trj"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "devDependencies": {}
+}

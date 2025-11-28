@@ -24,15 +24,44 @@
     const rootStyle = document.documentElement.style;
     rootStyle.setProperty('--viewer-bg', themeBackground);
     rootStyle.setProperty('--viewer-fg', foregroundColor);
+
     if (viewer) {
-      viewer.setBackgroundColor(themeBackground);
+      // 3Dmol requires a concrete color string (hex/rgb), it can't handle CSS variables directly.
+      // So we need to resolve the variable to a value.
+      // We create a temporary element to resolve the background color because getComputedStyle
+      // on body might not catch the variable if it's not applied yet or if it's inherited.
+      // However, since we set --viewer-bg on root, we can try to read that, 
+      // OR better: just let the browser resolve the variable we just passed in (themeBackground).
+
+      // If themeBackground is a var(...), we need to resolve it.
+      let colorToSet = themeBackground;
+      if (themeBackground.startsWith('var(')) {
+        // Create a temp element to resolve the color
+        const temp = document.createElement('div');
+        temp.style.display = 'none';
+        temp.style.color = themeBackground; // Use color property to resolve
+        document.body.appendChild(temp);
+        colorToSet = getComputedStyle(temp).color;
+        document.body.removeChild(temp);
+      }
+
+      viewer.setBackgroundColor(colorToSet);
       viewer.render();
     }
   }
 
   function ensureViewer() {
     if (!viewer) {
-      viewer = $3Dmol.createViewer(viewerElement, { backgroundColor: themeBackground });
+      let colorToSet = themeBackground;
+      if (themeBackground.startsWith('var(')) {
+        const temp = document.createElement('div');
+        temp.style.display = 'none';
+        temp.style.color = themeBackground;
+        document.body.appendChild(temp);
+        colorToSet = getComputedStyle(temp).color;
+        document.body.removeChild(temp);
+      }
+      viewer = $3Dmol.createViewer(viewerElement, { backgroundColor: colorToSet });
     }
     viewer.resize();
     viewer.render();

@@ -123,19 +123,10 @@ function postTheme(webview) {
 }
 
 function getThemeColors(theme = vscode.window.activeColorTheme) {
-    const fallback = {
-        backgroundColor: '#05070b',
-        foregroundColor: '#e0e4ea'
-    };
-    if (!theme) {
-        return fallback;
-    }
-    const kind = theme.kind;
-    const isDark = kind === vscode.ColorThemeKind.Dark || kind === vscode.ColorThemeKind.HighContrast;
-    const isLight = kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight;
+    // Use VS Code's native CSS variables for background and foreground
     return {
-        backgroundColor: isDark ? '#05070b' : '#f5f6f8',
-        foregroundColor: isDark ? '#e0e4ea' : '#1f2430'
+        backgroundColor: 'var(--vscode-editor-background)',
+        foregroundColor: 'var(--vscode-editor-foreground)'
     };
 }
 

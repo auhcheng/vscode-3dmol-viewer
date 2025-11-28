@@ -81,7 +81,7 @@
       console.warn('addModelsAsFrames failed, falling back to addModel', frameErr);
       viewer.addModel(content, 'xyz');
     }
-    viewer.setStyle({}, { stick: { radius: 0.2 }, sphere: { scale: 0.25 } });
+    viewer.setStyle({}, { stick: { radius: 0.2 }, sphere: { scale: 0.2 } });
     viewer.zoomTo();
     const model = viewer.getModel(0);
     const hasFrames = model && typeof model.getNumFrames === 'function' && model.getNumFrames() > 1;

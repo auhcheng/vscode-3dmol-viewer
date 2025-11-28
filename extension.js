@@ -6,6 +6,8 @@ const VIEWER_VIEW_TYPE = '3dmolViewer.viewer';
 const DEFAULT_VIEW_TYPE = 'default';
 const ASSOCIATED_PATTERNS = ['*.xyz', '*.trj'];
 
+const ThreeDmolViewerProvider = require('./provider');
+
 /**
  * @param {vscode.ExtensionContext} context
  */
@@ -43,25 +45,21 @@ function activate(context) {
 
   const toggleView = async () => {
     const activeTab = vscode.window.tabGroups?.activeTabGroup?.activeTab;
+    const uri = activeTab ? getUriFromTabInput(activeTab.input) : undefined;
 
-    if (isViewerTab(activeTab)) {
-      const uri = getUriFromTabInput(activeTab.input);
-      if (uri) {
-        await replaceWithView(uri, DEFAULT_VIEW_TYPE, isViewerTab);
-        return;
-      }
-    }
-
-    const uriFromTab = activeTab ? getUriFromTabInput(activeTab.input) : undefined;
-    const uri = uriFromTab || (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri);
-    if (uri) {
+    if (activeTab && uri) {
       const ext = path.extname(uri.fsPath || uri.path || '').toLowerCase();
       if (SUPPORTED_EXTENSIONS.has(ext)) {
-        await replaceWithView(uri, VIEWER_VIEW_TYPE, isTextTab);
+        // Determine target view type based on current tab type
+        const isViewer = isViewerTab(activeTab);
+        const targetViewType = isViewer ? DEFAULT_VIEW_TYPE : VIEWER_VIEW_TYPE;
+
+        await openOrSwitchToView(uri, targetViewType);
         return;
       }
     }
 
+    // Fallback if no active tab or not supported
     vscode.window.showInformationMessage('Select an .xyz or .trj file to toggle the 3D view.');
   };
 
@@ -84,107 +82,6 @@ function activate(context) {
   context.subscriptions.push(configListener);
 }
 
-class ThreeDmolViewerProvider {
-  /**
-   * @param {vscode.ExtensionContext} context
-   */
-  constructor(context) {
-    this.context = context;
-  }
-
-  /**
-   * @param {vscode.TextDocument} document
-   * @param {vscode.WebviewPanel} webviewPanel
-   */
-  resolveCustomTextEditor(document, webviewPanel) {
-    const webview = webviewPanel.webview;
-
-    webview.options = {
-      enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'media')]
-    };
-
-    const fileName = path.basename(document.uri.fsPath || document.uri.path);
-    let isReady = false;
-
-    const sendContentToWebview = () => {
-      if (!isReady) {
-        return;
-      }
-      const content = document.getText();
-      if (!content.trim()) {
-        webview.postMessage({ type: 'error', error: 'The selected file appears to be empty.' });
-        return;
-      }
-      webview.postMessage({
-        type: 'load',
-        fileName,
-        content
-      });
-    };
-
-    const messageListener = webview.onDidReceiveMessage(async (message) => {
-      if (!message || typeof message.type !== 'string') {
-        return;
-      }
-      if (message.type === 'ready') {
-        isReady = true;
-        postTheme(webview);
-        sendContentToWebview();
-        return;
-      }
-    });
-
-    const themeListener = vscode.window.onDidChangeActiveColorTheme(() => {
-      postTheme(webview);
-    });
-
-    const docListener = vscode.workspace.onDidChangeTextDocument((event) => {
-      if (event.document === document) {
-        sendContentToWebview();
-      }
-    });
-
-    webviewPanel.onDidDispose(() => {
-      messageListener.dispose();
-      themeListener.dispose();
-      docListener.dispose();
-    });
-
-    const initialThemeColors = getThemeColors();
-    webview.html = getWebviewContent(webview, this.context.extensionUri, fileName, initialThemeColors);
-    postTheme(webview);
-  }
-}
-
-/**
- * @param {vscode.Webview} webview
- * @param {vscode.Uri} extensionUri
- * @param {string} fileName
- */
-function getWebviewContent(webview, extensionUri, fileName, initialThemeColors = getThemeColors()) {
-  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'viewer.js'));
-  const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'style.css'));
-  const nonce = getNonce();
-
-  const htmlPath = vscode.Uri.joinPath(extensionUri, 'media', 'index.html');
-  const fs = require('fs');
-  let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
-
-  const { backgroundColor, foregroundColor } = initialThemeColors;
-
-  htmlContent = htmlContent
-    .replace(/{{cspSource}}/g, webview.cspSource)
-    .replace(/{{nonce}}/g, nonce)
-    .replace(/{{scriptUri}}/g, scriptUri)
-    .replace(/{{styleUri}}/g, styleUri)
-    .replace(/{{backgroundColor}}/g, backgroundColor)
-    .replace(/{{foregroundColor}}/g, foregroundColor);
-
-  return htmlContent;
-}
-
 function getTargetUri(resource) {
   if (resource instanceof vscode.Uri) {
     return resource;
@@ -194,40 +91,6 @@ function getTargetUri(resource) {
     return activeDoc.uri;
   }
   return undefined;
-}
-
-function getNonce() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 16; i += 1) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-function postTheme(webview) {
-  const colors = getThemeColors();
-  webview.postMessage({
-    type: 'theme',
-    ...colors
-  });
-}
-
-function getThemeColors(theme = vscode.window.activeColorTheme) {
-  const fallback = {
-    backgroundColor: '#05070b',
-    foregroundColor: '#e0e4ea'
-  };
-  if (!theme) {
-    return fallback;
-  }
-  const kind = theme.kind;
-  const isDark = kind === vscode.ColorThemeKind.Dark || kind === vscode.ColorThemeKind.HighContrast;
-  const isLight = kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight;
-  return {
-    backgroundColor: isDark ? '#05070b' : '#f5f6f8',
-    foregroundColor: isDark ? '#e0e4ea' : '#1f2430'
-  };
 }
 
 function getUriFromTabInput(input) {
@@ -257,35 +120,43 @@ function isTextTab(tab) {
   return tab.input instanceof vscode.TabInputText;
 }
 
-function findTabsForUri(uri, predicate) {
-  if (!uri || !vscode.window.tabGroups) {
-    return [];
-  }
-  const matches = [];
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      const tabUri = getUriFromTabInput(tab.input);
-      if (tabUri && tabUri.toString() === uri.toString()) {
-        if (!predicate || predicate(tab)) {
-          matches.push(tab);
-        }
-      }
-    }
-  }
-  return matches;
-}
+async function openOrSwitchToView(uri, viewType) {
+  // Check if the view is already open in any tab group
+  const allGroups = vscode.window.tabGroups.all;
+  let existingTab = undefined;
 
-async function replaceWithView(uri, viewType, tabsToClosePredicate) {
-  const tabsToClose = findTabsForUri(uri, tabsToClosePredicate);
-  await vscode.commands.executeCommand('vscode.openWith', uri, viewType, {
-    preview: false
-  });
-  if (tabsToClose.length) {
-    try {
-      await vscode.window.tabGroups.close(tabsToClose, true);
-    } catch (err) {
-      console.error('Failed to close tabs after toggling view', err);
-    }
+  for (const group of allGroups) {
+    existingTab = group.tabs.find(t => {
+      const tUri = getUriFromTabInput(t.input);
+      if (!tUri || tUri.toString() !== uri.toString()) {
+        return false;
+      }
+      if (viewType === VIEWER_VIEW_TYPE) {
+        return isViewerTab(t);
+      } else {
+        return isTextTab(t);
+      }
+    });
+    if (existingTab) break;
+  }
+
+  if (existingTab) {
+    // If found, reveal it
+    const viewColumn = existingTab.group.viewColumn;
+    await vscode.window.showTextDocument(uri, { viewColumn, preview: false });
+    // Note: showTextDocument might not work perfectly for custom editors if we just pass URI.
+    // But since we found the tab, we can try to focus it.
+    // Actually, vscode.openWith with the same viewColumn and preview:false should switch to it.
+    await vscode.commands.executeCommand('vscode.openWith', uri, viewType, {
+      preview: false,
+      viewColumn
+    });
+  } else {
+    // If not found, open it in the active group (or beside if preferred, but user said "new tab")
+    // "New tab" usually means just opening it.
+    await vscode.commands.executeCommand('vscode.openWith', uri, viewType, {
+      preview: false
+    });
   }
 }
 

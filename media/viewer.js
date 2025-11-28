@@ -1,7 +1,6 @@
 (() => {
   const vscode = acquireVsCodeApi();
   const viewerElement = document.getElementById('viewer');
-  const statusElement = document.getElementById('status');
   let viewer = null;
 
   const readInitialThemeValue = (variableName, fallback) => {
@@ -17,23 +16,14 @@
 
   let themeBackground = readInitialThemeValue('--viewer-bg', '#0c111a');
   let foregroundColor = readInitialThemeValue('--viewer-fg', '#e0e4ea');
-  let statusBackground = readInitialThemeValue('--viewer-status-bg', 'rgba(0, 0, 0, 0.45)');
   const revealUI = () => document.body && document.body.classList.add('viewer-ready');
 
-  function showStatus(text) {
-    if (statusElement) {
-      statusElement.textContent = text;
-    }
-  }
+
 
   function applyTheme() {
     const rootStyle = document.documentElement.style;
     rootStyle.setProperty('--viewer-bg', themeBackground);
     rootStyle.setProperty('--viewer-fg', foregroundColor);
-    rootStyle.setProperty('--viewer-status-bg', statusBackground);
-    if (statusElement) {
-      statusElement.style.color = foregroundColor;
-    }
     if (viewer) {
       viewer.setBackgroundColor(themeBackground);
       viewer.render();
@@ -70,11 +60,6 @@
       viewer.animate({ interval: 120, loop: true });
     }
     viewer.render();
-    if (fileName) {
-      showStatus(hasFrames ? `${fileName} (trajectory)` : fileName);
-    } else {
-      showStatus(hasFrames ? 'Trajectory loaded' : 'Structure loaded');
-    }
     revealUI();
   }
 
@@ -90,9 +75,6 @@
       if (message.foregroundColor) {
         foregroundColor = message.foregroundColor;
       }
-      if (message.statusBackground) {
-        statusBackground = message.statusBackground;
-      }
       applyTheme();
       return;
     }
@@ -101,11 +83,10 @@
         render(message.content, message.fileName);
       } catch (err) {
         console.error('render failed', err);
-        showStatus('Unable to display file.');
         revealUI();
       }
     } else if (message.type === 'error') {
-      showStatus(message.error || 'Error');
+      console.error(message.error || 'Error');
       revealUI();
     }
   });

@@ -165,62 +165,24 @@ class ThreeDmolViewerProvider {
  */
 function getWebviewContent(webview, extensionUri, fileName, initialThemeColors = getThemeColors()) {
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'viewer.js'));
+  const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'style.css'));
   const nonce = getNonce();
 
-  const csp = [
-    "default-src 'none'",
-    "img-src https: data:",
-    "style-src 'unsafe-inline'",
-    `script-src 'nonce-${nonce}' https://3dmol.org`
-  ].join('; ');
+  const htmlPath = vscode.Uri.joinPath(extensionUri, 'media', 'index.html');
+  const fs = require('fs');
+  let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
 
-  const { backgroundColor, foregroundColor, statusBackground } = initialThemeColors;
+  const { backgroundColor, foregroundColor } = initialThemeColors;
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="${csp}">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3Dmol Viewer - ${fileName}</title>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      background: var(--viewer-bg, #05070b);
-      color: var(--viewer-fg, #e0e4ea);
-      font-family: system-ui, sans-serif;
-    }
-    body {
-      opacity: 0;
-    }
-    body.viewer-ready {
-      opacity: 1;
-    }
-    #status {
-      position: absolute;
-      top: 12px;
-      left: 16px;
-      padding: 6px 10px;
-      background: var(--viewer-status-bg, rgba(0, 0, 0, 0.45));
-      border-radius: 4px;
-      font-size: 13px;
-      z-index: 2;
-    }
-    #viewer {
-      width: 100%;
-      height: 100%;
-    }
-  </style>
-</head>
-<body style="--viewer-bg: ${backgroundColor}; --viewer-fg: ${foregroundColor}; --viewer-status-bg: ${statusBackground};">
-  <div id="status">Loading…</div>
-  <div id="viewer"></div>
-  <script nonce="${nonce}" src="https://3dmol.org/build/3Dmol-min.js"></script>
-  <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+  htmlContent = htmlContent
+    .replace(/{{cspSource}}/g, webview.cspSource)
+    .replace(/{{nonce}}/g, nonce)
+    .replace(/{{scriptUri}}/g, scriptUri)
+    .replace(/{{styleUri}}/g, styleUri)
+    .replace(/{{backgroundColor}}/g, backgroundColor)
+    .replace(/{{foregroundColor}}/g, foregroundColor);
+
+  return htmlContent;
 }
 
 function getTargetUri(resource) {
@@ -254,8 +216,7 @@ function postTheme(webview) {
 function getThemeColors(theme = vscode.window.activeColorTheme) {
   const fallback = {
     backgroundColor: '#05070b',
-    foregroundColor: '#e0e4ea',
-    statusBackground: 'rgba(0, 0, 0, 0.55)'
+    foregroundColor: '#e0e4ea'
   };
   if (!theme) {
     return fallback;
@@ -265,12 +226,7 @@ function getThemeColors(theme = vscode.window.activeColorTheme) {
   const isLight = kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight;
   return {
     backgroundColor: isDark ? '#05070b' : '#f5f6f8',
-    foregroundColor: isDark ? '#e0e4ea' : '#1f2430',
-    statusBackground: isDark
-      ? 'rgba(0, 0, 0, 0.55)'
-      : isLight
-        ? 'rgba(255, 255, 255, 0.75)'
-        : 'rgba(0, 0, 0, 0.45)'
+    foregroundColor: isDark ? '#e0e4ea' : '#1f2430'
   };
 }
 
@@ -380,7 +336,7 @@ function normalizeEditorAssociations(value) {
   return {};
 }
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
   activate,

@@ -1,8 +1,8 @@
 {
   "name": "3dmol-viewer",
   "displayName": "3Dmol Viewer",
-  "description": "Open .xyz or .trj molecular files in a 3Dmol.js webview inside VS Code.",
-  "version": "0.0.3",
+  "description": "Open .xyz, .trj or .cif molecular files in a 3Dmol.js webview inside VS Code.",
+  "version": "0.0.4",
   "publisher": "auhcheng",
   "repository": {
     "type": "git",
@@ -14,7 +14,8 @@
   },
   "main": "./extension.js",
   "activationEvents": [
-    "onLanguage:xyz"
+    "onLanguage:xyz",
+    "onLanguage:cif"
   ],
   "categories": [
     "Other"
@@ -27,7 +28,7 @@
           "type": "string",
           "enum": ["viewer", "text"],
           "default": "viewer",
-          "description": "Choose whether .xyz/.trj files open in the 3Dmol Viewer or the standard text editor by default.",
+          "description": "Choose whether .xyz/.trj/.cif files open in the 3Dmol Viewer or the standard text editor by default.",
           "enumDescriptions": [
             "Always open using the 3Dmol Viewer (custom editor).",
             "Open in the built-in text editor; the viewer remains available via Toggle 3D/Text View."
@@ -40,6 +41,11 @@
         "id": "xyz",
         "aliases": ["XYZ"],
         "extensions": [".xyz", ".trj"]
+      },
+      {
+        "id": "cif",
+        "aliases": ["CIF"],
+        "extensions": [".cif"]
       }
     ],
     "commands": [
@@ -67,7 +73,7 @@
       "editor/title": [
         {
           "command": "3dmolViewer.toggleView",
-          "when": "resourceExtname =~ /\\.(xyz|XYZ|trj|TRJ)$/",
+          "when": "resourceExtname =~ /\\.(xyz|XYZ|trj|TRJ|cif|CIF)$/",
           "group": "navigation@90"
         },
         {
@@ -79,7 +85,7 @@
       "explorer/context": [
         {
           "command": "3dmolViewer.open",
-          "when": "resourceExtname =~ /\\.(xyz|XYZ|trj|TRJ)$/",
+          "when": "resourceExtname =~ /\\.(xyz|XYZ|trj|TRJ|cif|CIF)$/",
           "group": "navigation@10"
         }
       ],
@@ -105,6 +111,9 @@
           },
           {
             "filenamePattern": "*.trj"
+          },
+          {
+            "filenamePattern": "*.cif"
           }
         ],
         "priority": "default"

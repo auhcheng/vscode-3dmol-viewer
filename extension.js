@@ -1,10 +1,10 @@
 const vscode = require('vscode');
 const path = require('path');
 
-const SUPPORTED_EXTENSIONS = new Set(['.xyz', '.trj']);
+const SUPPORTED_EXTENSIONS = new Set(['.xyz', '.trj', '.cif']);
 const VIEWER_VIEW_TYPE = '3dmolViewer.viewer';
 const DEFAULT_VIEW_TYPE = 'default';
-const ASSOCIATED_PATTERNS = ['*.xyz', '*.trj'];
+const ASSOCIATED_PATTERNS = ['*.xyz', '*.trj', '*.cif'];
 
 const ThreeDmolViewerProvider = require('./provider');
 
@@ -24,13 +24,13 @@ function activate(context) {
     try {
       const targetUri = getTargetUri(resource);
       if (!targetUri) {
-        vscode.window.showInformationMessage('Select an .xyz or .trj file, then run “Open in 3Dmol Viewer”.');
+        vscode.window.showInformationMessage('Select an .xyz, .trj or .cif file, then run “Open in 3Dmol Viewer”.');
         return;
       }
 
       const extension = path.extname(targetUri.fsPath || '').toLowerCase();
       if (!SUPPORTED_EXTENSIONS.has(extension)) {
-        vscode.window.showWarningMessage('Only .xyz and .trj files can be opened in the 3Dmol viewer.');
+        vscode.window.showWarningMessage('Only .xyz, .trj and .cif files can be opened in the 3Dmol viewer.');
         return;
       }
 
@@ -60,7 +60,7 @@ function activate(context) {
     }
 
     // Fallback if no active tab or not supported
-    vscode.window.showInformationMessage('Select an .xyz or .trj file to toggle the 3D view.');
+    vscode.window.showInformationMessage('Select an .xyz, .trj or .cif file to toggle the 3D view.');
   };
 
   context.subscriptions.push(
